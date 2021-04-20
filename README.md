@@ -6,7 +6,7 @@ Just pip install, and you are ready to write some nice logs!
 ## Get Started
 
 ```
-pip install https://github.com/airfluencers/airlogger.git
+pip install git+https://github.com/airfluencers/airlogger.git
 ```
 
 ### Install in Flask
