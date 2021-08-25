@@ -50,7 +50,7 @@ def init_app(app, require_trace_id: bool = True):
     @app.after_request
     def after_request(response):
         meta = {
-            'event_type': 'REQUEST',
+            'event_type': 'RESPONSE',
             'endpoint': request.endpoint,
             'response_time': int(g.air_timestamp - time.time()),
             'request_id': g.air_request_id,
