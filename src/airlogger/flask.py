@@ -53,7 +53,8 @@ def init_app(app, require_trace_id: bool = True):
             'event_type': 'REQUEST',
             'endpoint': request.endpoint,
             'response_time': int(g.air_timestamp - time.time()),
-            'request_id': g.air_request_id
+            'request_id': g.air_request_id,
+            'status_code': request.status_code,
         }
 
         if isinstance(app.config.get('AIR_HOOK_LOG_RESPONSE'), FunctionType):
