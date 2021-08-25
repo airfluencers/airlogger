@@ -69,7 +69,7 @@ def init_app(app, require_trace_id: bool = True):
 
         if isinstance(app.extra.get('AIR_HOOK_LOG_RESPONSE'), FunctionType):
             hook_response = app.extra.get['AIR_HOOK_LOG_RESPONSE'](response)
-            if type(hook_response) == dict:
+            if not type(hook_response) == dict:
                 raise InvalidHookResult
             meta.update(hook_response)
 

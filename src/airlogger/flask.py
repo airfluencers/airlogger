@@ -37,7 +37,7 @@ def init_app(app, require_trace_id: bool = True):
         }
         
         if isinstance(app.config.get('AIR_HOOK_LOG_REQUEST'), FunctionType):
-            hook_result = app.config.get['AIR_HOOK_LOG_REQUEST'](request)
+            hook_result = app.config['AIR_HOOK_LOG_REQUEST'](request)
             if not type(hook_result) == dict:
                 raise InvalidHookResult
             meta.update(hook_result)
@@ -58,8 +58,8 @@ def init_app(app, require_trace_id: bool = True):
         }
 
         if isinstance(app.config.get('AIR_HOOK_LOG_RESPONSE'), FunctionType):
-            hook_response = app.config.get['AIR_HOOK_LOG_RESPONSE'](response)
-            if type(hook_response) == dict:
+            hook_response = app.config['AIR_HOOK_LOG_RESPONSE'](response)
+            if not type(hook_response) == dict:
                 raise InvalidHookResult
             meta.update(hook_response)
 
