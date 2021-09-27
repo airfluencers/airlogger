@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="airlogger",
-    version="0.0.1",
+    version="0.0.2",
     author="Guilherme Ferraz",
     author_email="guilherme@airfluencers.com",
     description="A package to organize logs in distributed systems",
