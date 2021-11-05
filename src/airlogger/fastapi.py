@@ -1,3 +1,4 @@
+import json
 import logging
 import sys
 import time
@@ -25,18 +26,30 @@ def init_app(app, require_trace_id: bool = True):
     globals.airlogger.setLevel(logging.INFO)
     globals.airlogger.addHandler(AirTraceHandler(app.title, 'webserver', require_trace_id))
 
+    async def receive_body(request: Request):
+
+        # workaround to get body
+
+        receive_ = await request._receive()
+
+        async def receive():
+            return receive_
+
+        request._receive = receive
+
     async def func(request: Request, call_next):
 
         globals.air_trace_id = request.headers.get('X-Air-Trace-Id')
         start_time = time.time()
 
-        # if request.headers.get('content-type', '').find('application/json') > -1:
-        #     body = await request.json()
-        # else:
-        #     body = (await request.body())
-        #
-        #     if not body:
-        #         body = ''
+        await receive_body(request)
+        body = await request.body()
+        body = body.decode()
+
+        try:
+            body = json.loads(body)
+        except ValueError:
+            pass
 
         air_request_id = str(uuid4())
 
@@ -44,7 +57,8 @@ def init_app(app, require_trace_id: bool = True):
             'method': request.method,
             'endpoint': request.url.path,
             'request_id': air_request_id,
-            'event_type': 'REQUEST'
+            'event_type': 'REQUEST',
+            'body': body,
         }
 
         if isinstance(app.extra.get('AIR_HOOK_LOG_REQUEST'), FunctionType):
