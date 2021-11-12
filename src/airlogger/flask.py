@@ -25,7 +25,7 @@ def init_app(app, require_trace_id: bool = True):
 
     @app.before_request
     def before_request():
-        globals.air_trace_id = request.headers.get('X-Air-Trace-Id')
+        globals.air_trace_id = request.headers.get('X-Air-Trace-Id', str(uuid4()))
         g.air_timestamp = time.time()
         g.air_request_id = str(uuid4())
 
