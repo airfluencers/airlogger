@@ -39,7 +39,7 @@ def init_app(app, require_trace_id: bool = True):
 
     async def func(request: Request, call_next):
 
-        globals.air_trace_id = request.headers.get('X-Air-Trace-Id')
+        globals.air_trace_id = request.headers.get('X-Air-Trace-Id', str(uuid4()))
         start_time = time.time()
 
         await receive_body(request)
