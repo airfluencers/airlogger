@@ -9,9 +9,20 @@ from airlogger import globals
 from airlogger.exceptions import AirTraceIdRequired, InvalidHookResult
 from airlogger.handler import AirTraceHandler
 
+
+# Replaces requests module for airlogger.requests module
 try:
+    # imports requests for forcing original module's register
     import requests
-    sys.modules['requests'] = requests
+
+    # import airlogger.requests as airlogger_requests 
+    from airlogger import requests as airlogger_requests
+
+    # removes original module's register
+    del sys.modules['requests']
+
+    # register airlogger as requests
+    sys.modules['requests'] = airlogger_requests
 except ImportError:
     pass
 
@@ -20,7 +31,7 @@ def init_app(app, require_trace_id: bool = True):
     from fastapi import Request
     from starlette.middleware.base import BaseHTTPMiddleware
     from fastapi.responses import JSONResponse
-    
+
     globals.airlogger = logging.getLogger('airlogger')
     globals.airlogger.propagate = True
     globals.airlogger.setLevel(logging.INFO)
