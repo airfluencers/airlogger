@@ -54,13 +54,17 @@ def init_app(app, require_trace_id: bool = True):
         start_time = time.time()
 
         await receive_body(request)
-        body = await request.body()
-        body = body.decode()
+        body_content = {}
 
         try:
-            body = json.loads(body)
+            body = await request.body()
+            body = body.decode()
+            body_content = json.loads(body)
         except ValueError:
             pass
+        except UnicodeDecodeError:
+            pass
+
 
         air_request_id = str(uuid4())
 
@@ -69,8 +73,9 @@ def init_app(app, require_trace_id: bool = True):
             'endpoint': request.url.path,
             'request_id': air_request_id,
             'event_type': 'REQUEST',
-            'body': body,
+            'body': body_content,
         }
+
 
         if isinstance(app.extra.get('AIR_HOOK_LOG_REQUEST'), FunctionType):
             hook_result = app.extra.get['AIR_HOOK_LOG_REQUEST'](request)
