@@ -31,12 +31,11 @@ class AirTraceHandler(StreamHandler):
             'hostname': os.environ.get('HOSTNAME'),
             'level': record.levelname,
             'timetsamp': datetime.datetime.now().timestamp(),
-            'msg': record.msg,
+            'msg': str(record.msg),
             'app_name': self.service_name,
             'app_type': self.service_type,
             'air_trace_id': globals.air_trace_id,
-            'msg': record.msg,
-            'traceback': str(traceback.print_exc()) if record.levelno >= logging.ERROR else None,
+            'traceback': str(traceback.format_exc()) if record.levelno >= logging.ERROR else None,
             'meta': record.args
         }
         

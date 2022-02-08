@@ -31,7 +31,7 @@ def init_app(app, require_trace_id: bool = True):
 
         meta = {
             'method': request.method,
-            'endpoint': request.endpoint,
+            'endpoint': request.path,
             'request_id': g.air_request_id,
             'event_type': 'REQUEST'
         }
