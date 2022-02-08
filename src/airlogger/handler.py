@@ -40,3 +40,6 @@ class AirTraceHandler(StreamHandler):
         }
         
         self.stream.write(json.dumps(log_record) + '\n')
+
+        if record.levelno >= logging.ERROR:
+            traceback.print_exc()
