@@ -51,7 +51,7 @@ def init_app(app, require_trace_id: bool = True):
     def after_request(response):
         meta = {
             'event_type': 'RESPONSE',
-            'endpoint': request.endpoint,
+            'endpoint': request.path,
             'response_time': int(g.air_timestamp - time.time()),
             'request_id': g.air_request_id,
             'status_code': response.status_code,
