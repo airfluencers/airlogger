@@ -15,7 +15,7 @@ try:
     # imports requests for forcing original module's register
     import requests
 
-    # import airlogger.requests as airlogger_requests 
+    # import airlogger.requests as airlogger_requests
     from airlogger import requests as airlogger_requests
 
     # removes original module's register
@@ -30,12 +30,14 @@ except ImportError:
 def init_app(app, require_trace_id: bool = True):
     from fastapi import Request
     from starlette.middleware.base import BaseHTTPMiddleware
+    from starlette.datastructures import UploadFile
     from fastapi.responses import JSONResponse
 
     globals.airlogger = logging.getLogger('airlogger')
     globals.airlogger.propagate = True
     globals.airlogger.setLevel(logging.INFO)
-    globals.airlogger.addHandler(AirTraceHandler(app.title, 'webserver', require_trace_id))
+    globals.airlogger.addHandler(AirTraceHandler(
+        app.title, 'webserver', require_trace_id))
 
     async def receive_body(request: Request):
 
@@ -50,17 +52,35 @@ def init_app(app, require_trace_id: bool = True):
 
     async def func(request: Request, call_next):
 
-        globals.air_trace_id = request.headers.get('X-Air-Trace-Id', str(uuid4()))
+        globals.air_trace_id = request.headers.get(
+            'X-Air-Trace-Id', str(uuid4()))
         start_time = time.time()
 
         await receive_body(request)
-        body = await request.body()
-        body = body.decode()
+        body_content = {}
 
-        try:
-            body = json.loads(body)
-        except ValueError:
-            pass
+        form_data = await request.form()
+        files = []
+
+        for field in form_data:
+            form_field = form_data[field]
+            if isinstance(form_field, UploadFile):
+                files.append(form_field)
+
+        if files:
+            body_content = {
+                'files': [f.filename for f in files]
+            }
+
+        else:
+            try:
+                body = await request.body()
+                body = body.decode()
+                body_content = json.loads(body)
+            except ValueError:
+                pass
+            except UnicodeDecodeError:
+                pass
 
         air_request_id = str(uuid4())
 
@@ -69,7 +89,7 @@ def init_app(app, require_trace_id: bool = True):
             'endpoint': request.url.path,
             'request_id': air_request_id,
             'event_type': 'REQUEST',
-            'body': body,
+            'body': body_content,
         }
 
         if isinstance(app.extra.get('AIR_HOOK_LOG_REQUEST'), FunctionType):
