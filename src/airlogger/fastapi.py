@@ -7,6 +7,7 @@ from uuid import uuid4
 
 from airlogger import globals
 from airlogger.exceptions import AirTraceIdRequired, InvalidHookResult
+from airlogger.utils.sanitizer import sanitize_body
 from starlette.concurrency import iterate_in_threadpool
 from airlogger.handler import AirTraceHandler
 
@@ -34,10 +35,12 @@ LOG_BLACKLIST = [
 ]
 
 
+
+
 def init_app(
     app,
     require_trace_id: bool = True,
-    logger_level: str = None,
+    logger_level: str = logging.INFO,
     log_request_body: str = True,
     log_response_body: str = True
 ):
@@ -50,7 +53,7 @@ def init_app(
     globals.airlogger.propagate = True
 
     if logger_level:
-        globals.airlogger.setLevel(logging.INFO)
+        globals.airlogger.setLevel(logger_level)
 
     globals.airlogger.addHandler(AirTraceHandler(
         app.title, 'webserver', require_trace_id
@@ -107,7 +110,7 @@ def init_app(
             'endpoint': request.url.path,
             'request_id': air_request_id,
             'event_type': 'REQUEST',
-            'body': body_content,
+            'body': sanitize_body(body_content),
         }
 
         if isinstance(app.extra.get('AIR_HOOK_LOG_REQUEST'), FunctionType):
@@ -147,7 +150,7 @@ def init_app(
                 except UnicodeDecodeError:
                     pass
 
-        meta.update({'body': body_content})
+        meta.update({'body': sanitize_body(body_content)})
 
         if isinstance(app.extra.get('AIR_HOOK_LOG_RESPONSE'), FunctionType):
             hook_response = app.extra.get['AIR_HOOK_LOG_RESPONSE'](response)
