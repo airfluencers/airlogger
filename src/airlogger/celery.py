@@ -1,4 +1,3 @@
-from datetime import timedelta
 import logging
 import sys
 from time import time

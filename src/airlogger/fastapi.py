@@ -7,6 +7,8 @@ from uuid import uuid4
 
 from airlogger import globals
 from airlogger.exceptions import AirTraceIdRequired, InvalidHookResult
+from airlogger.utils.sanitizer import sanitize_body
+from starlette.concurrency import iterate_in_threadpool
 from airlogger.handler import AirTraceHandler
 
 
@@ -26,8 +28,22 @@ try:
 except ImportError:
     pass
 
+LOG_BLACKLIST = [
+    '/docs',
+    '/redoc',
+    '/openapi.json'
+]
 
-def init_app(app, require_trace_id: bool = True):
+
+
+
+def init_app(
+    app,
+    require_trace_id: bool = True,
+    logger_level: str = logging.INFO,
+    log_request_body: str = True,
+    log_response_body: str = True
+):
     from fastapi import Request
     from starlette.middleware.base import BaseHTTPMiddleware
     from starlette.datastructures import UploadFile
@@ -35,9 +51,13 @@ def init_app(app, require_trace_id: bool = True):
 
     globals.airlogger = logging.getLogger('airlogger')
     globals.airlogger.propagate = True
-    globals.airlogger.setLevel(logging.INFO)
+
+    if logger_level:
+        globals.airlogger.setLevel(logger_level)
+
     globals.airlogger.addHandler(AirTraceHandler(
-        app.title, 'webserver', require_trace_id))
+        app.title, 'webserver', require_trace_id
+    ))
 
     async def receive_body(request: Request):
 
@@ -62,25 +82,26 @@ def init_app(app, require_trace_id: bool = True):
         form_data = await request.form()
         files = []
 
-        for field in form_data:
-            form_field = form_data[field]
-            if isinstance(form_field, UploadFile):
-                files.append(form_field)
+        if log_request_body:
+            for field in form_data:
+                form_field = form_data[field]
+                if isinstance(form_field, UploadFile):
+                    files.append(form_field)
 
-        if files:
-            body_content = {
-                'files': [f.filename for f in files]
-            }
+            if files:
+                body_content = {
+                    'files': [f.filename for f in files]
+                }
 
-        else:
-            try:
-                body = await request.body()
-                body = body.decode()
-                body_content = json.loads(body)
-            except ValueError:
-                pass
-            except UnicodeDecodeError:
-                pass
+            else:
+                try:
+                    body = await request.body()
+                    body = body.decode()
+                    body_content = json.loads(body)
+                except ValueError:
+                    pass
+                except UnicodeDecodeError:
+                    pass
 
         air_request_id = str(uuid4())
 
@@ -89,7 +110,7 @@ def init_app(app, require_trace_id: bool = True):
             'endpoint': request.url.path,
             'request_id': air_request_id,
             'event_type': 'REQUEST',
-            'body': body_content,
+            'body': sanitize_body(body_content),
         }
 
         if isinstance(app.extra.get('AIR_HOOK_LOG_REQUEST'), FunctionType):
@@ -109,8 +130,27 @@ def init_app(app, require_trace_id: bool = True):
             'event_type': 'RESPONSE',
             'endpoint': request.url.path,
             'response_time': process_time,
-            'request_id': air_request_id
+            'request_id': air_request_id,
+            'status_code': response.status_code
         }
+
+        files = []
+        body_content = {}
+
+        if log_response_body:
+            if request.url.path not in LOG_BLACKLIST:
+                try:
+                    response_body = [section async for section in response.body_iterator]
+                    response.body_iterator = iterate_in_threadpool(
+                        iter(response_body))
+                    body_content = json.loads(response_body[0].decode())
+
+                except ValueError:
+                    pass
+                except UnicodeDecodeError:
+                    pass
+
+        meta.update({'body': sanitize_body(body_content)})
 
         if isinstance(app.extra.get('AIR_HOOK_LOG_RESPONSE'), FunctionType):
             hook_response = app.extra.get['AIR_HOOK_LOG_RESPONSE'](response)
