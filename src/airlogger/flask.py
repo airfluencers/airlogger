@@ -35,6 +35,15 @@ def init_app(app, require_trace_id: bool = True):
             'request_id': g.air_request_id,
             'event_type': 'REQUEST'
         }
+
+        hide_log = False
+        if isinstance(app.config.get('AIR_HOOK_HIDE_REQUEST'), FunctionType):
+            hide_log = app.config['AIR_HOOK_HIDE_REQUEST'](request)
+            if not type(hide_log) == bool:
+                raise InvalidHookResult
+
+        if hide_log:
+            return None
         
         if isinstance(app.config.get('AIR_HOOK_LOG_REQUEST'), FunctionType):
             hook_result = app.config['AIR_HOOK_LOG_REQUEST'](request)
@@ -57,6 +66,15 @@ def init_app(app, require_trace_id: bool = True):
             'status_code': response.status_code,
         }
 
+        hide_log = False
+        if isinstance(app.config.get('AIR_HOOK_HIDE_RESPONSE'), FunctionType):
+            hide_log = app.config['AIR_HOOK_HIDE_RESPONSE'](request, response)
+            if not type(hide_log) == bool:
+                raise InvalidHookResult
+
+        if hide_log:
+            return response
+        
         if isinstance(app.config.get('AIR_HOOK_LOG_RESPONSE'), FunctionType):
             hook_response = app.config['AIR_HOOK_LOG_RESPONSE'](response)
             if not type(hook_response) == dict:
