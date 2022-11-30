@@ -35,14 +35,14 @@ LOG_BLACKLIST = [
 ]
 
 
-
-
 def init_app(
     app,
     require_trace_id: bool = True,
     logger_level: str = logging.INFO,
-    log_request_body: str = True,
-    log_response_body: str = True
+    log_request_body: bool = True,
+    log_response_body: bool = True,
+    indent_request_meta: bool = True,
+    use_colors: bool = False
 ):
     from fastapi import Request
     from starlette.middleware.base import BaseHTTPMiddleware
@@ -55,9 +55,12 @@ def init_app(
     if logger_level:
         globals.airlogger.setLevel(logger_level)
 
-    globals.airlogger.addHandler(AirTraceHandler(
-        app.title, 'webserver', require_trace_id
-    ))
+    globals.airlogger.handlers = []
+    handler = AirTraceHandler(
+        app.title, 'webserver', require_trace_id, use_colors=use_colors
+    )
+
+    globals.airlogger.addHandler(handler)
 
     async def receive_body(request: Request):
 
@@ -80,6 +83,11 @@ def init_app(
         body_content = {}
 
         form_data = await request.form()
+        logging_kwargs = {}
+
+        if indent_request_meta:
+            logging_kwargs = {"indent": 4, "separators": (',', ': ')}
+
         files = []
 
         if log_request_body:
@@ -115,23 +123,26 @@ def init_app(
 
         if isinstance(app.extra.get('AIR_HOOK_LOG_REQUEST'), FunctionType):
             hook_result = app.extra.get['AIR_HOOK_LOG_REQUEST'](request)
+
             if not type(hook_result) == dict:
                 raise InvalidHookResult
+
             meta.update(hook_result)
+
         try:
-            globals.airlogger.info('incoming request', meta)
+            globals.airlogger.info(json.dumps(meta, **logging_kwargs))
         except AirTraceIdRequired as e:
             return JSONResponse(status_code=400, content={'msg': e.http_response})
 
         response = await call_next(request)
         process_time = time.time() - start_time
-
+        status_code = response.status_code
         meta = {
             'event_type': 'RESPONSE',
             'endpoint': request.url.path,
             'response_time': process_time,
             'request_id': air_request_id,
-            'status_code': response.status_code
+            'status_code': status_code
         }
 
         files = []
@@ -154,11 +165,22 @@ def init_app(
 
         if isinstance(app.extra.get('AIR_HOOK_LOG_RESPONSE'), FunctionType):
             hook_response = app.extra.get['AIR_HOOK_LOG_RESPONSE'](response)
+
             if not type(hook_response) == dict:
                 raise InvalidHookResult
+
             meta.update(hook_response)
 
-        globals.airlogger.info('outcoming request', meta)
+        if status_code in range(400, 600):
+            globals.airlogger.error(json.dumps(
+                meta, **logging_kwargs
+            )
+            )
+        else:
+            globals.airlogger.info(json.dumps(
+                meta, **logging_kwargs
+            )
+            )
 
         return response
 
