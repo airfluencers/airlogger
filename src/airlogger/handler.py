@@ -14,11 +14,12 @@ import ast
 
 
 class AirTraceHandler(StreamHandler):
-    def __init__(self, service_name: str, service_type: str, require_trace_id: bool = True, use_colors: bool = False) -> None:
+    def __init__(self, service_name: str, service_type: str, require_trace_id: bool = True, use_colors: bool = False, color_code=90) -> None:
         self.service_name = service_name
         self.service_type = service_type
         self.require_trace_id = require_trace_id
         self.use_colors = use_colors
+        self.color_code = color_code
         super().__init__(stream=sys.stdout)
 
     def verify_trace_id(self):
@@ -43,7 +44,7 @@ class AirTraceHandler(StreamHandler):
 
     def format_record(self, record: Dict[str, Any]) -> None:
         str_record = json.dumps(record)
-        color_code = 30
+        color_code = self.color_code
 
         if self.use_colors:
             return f"\033[0;{color_code}m{str_record}\033[0m\n"

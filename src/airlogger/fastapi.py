@@ -42,7 +42,8 @@ def init_app(
     log_request_body: bool = True,
     log_response_body: bool = True,
     indent_request_meta: bool = True,
-    use_colors: bool = False
+    use_colors: bool = False,
+    color_code: int = 90
 ):
     from fastapi import Request
     from starlette.middleware.base import BaseHTTPMiddleware
@@ -57,7 +58,7 @@ def init_app(
 
     globals.airlogger.handlers = []
     handler = AirTraceHandler(
-        app.title, 'webserver', require_trace_id, use_colors=use_colors
+        app.title, 'webserver', require_trace_id, use_colors=use_colors, color_code=color_code
     )
 
     globals.airlogger.addHandler(handler)
