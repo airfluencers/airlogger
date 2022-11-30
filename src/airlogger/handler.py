@@ -28,7 +28,11 @@ class AirTraceHandler(StreamHandler):
     def format_message_as_string(self, message) -> str:
 
         if isinstance(message, str):
-            return ast.literal_eval(message)
+            try:
+                return ast.literal_eval(message)
+            except Exception:
+                ...
+
         if isinstance(message, dict):
             try:
                 return json.dumps(message)
